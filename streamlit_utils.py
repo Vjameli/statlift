@@ -8,4 +8,4 @@ def v_space(lines: int) -> None:
         lines (int): Number of lines of white space.
     """
     for _ in range(lines):
-        st.write('&nbsp;')
+        st.write("&nbsp;")
