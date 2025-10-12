@@ -32,10 +32,14 @@ I'm neither a Streamlit expert nor physically able to produce the most impressiv
 
     `cd statlift`
 
-3. Install required packages:
+3. Start statlift using streamlit:
 
-    `pip install -r requirements.txt`
+    - Option A: uv
 
-4. Start statlift using streamlit:
+        `uv run --frozen streamlit run statlift.py`
 
-    `streamlit run statlift.py`
+    - Option B: pip
+
+        `pip install -r requirements.txt`
+
+        `streamlit run statlift.py` 
