@@ -187,6 +187,9 @@ if __name__ == "__main__":
         metric_to_column.keys(),
         default=metric_to_column.keys(),
     )
+    exercise_regression = st.toggle(
+        "Show linear regression", key="exercise_regression", value=True
+    )
     graph_columns = st.columns(2)
 
     for m, metric in enumerate(selected_metrics):
@@ -205,9 +208,10 @@ if __name__ == "__main__":
                 ],
             )
         )
-        chart += chart.transform_regression("date", metric_to_column[metric]).mark_line(
-            color="red"
-        )
+        if exercise_regression:
+            chart += chart.transform_regression(
+                "date", metric_to_column[metric]
+            ).mark_line(color="red")
         col.altair_chart(chart, use_container_width=True)
 
     ###########################################################################
@@ -238,6 +242,9 @@ if __name__ == "__main__":
     # 3b. Graphs
     v_space(1)
     st.write(f"##### :chart_with_upwards_trend: Graphs for *{workout_filter}*:")
+    workout_toggle = st.toggle(
+        "Show linear regression", key="workout_regression", value=True
+    )
     metric_to_column_workout = {
         "Total Volume (per workout)": "total_volume",
         "Total Reps (per workout)": "total_reps",
@@ -257,9 +264,10 @@ if __name__ == "__main__":
                 y=alt.Y(metric_to_column_workout[metric], title=metric),
             )
         )
-        chart += chart.transform_regression(
-            "date", metric_to_column_workout[metric]
-        ).mark_line(color="red")
+        if workout_toggle:
+            chart += chart.transform_regression(
+                "date", metric_to_column_workout[metric]
+            ).mark_line(color="red")
         col.altair_chart(chart, use_container_width=True)
 
     # Reset update-triggers in session state to False.
