@@ -1,0 +1,9 @@
+[project]
+name = "statlift"
+version = "0.1.1"
+description = "Free Analytics for Strong Data"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "streamlit>=1.50.0",
+]

@@ -1,10 +1,11 @@
-import pandas as pd
-import numpy as np
-import json
-from typing import Dict, Tuple
-import re
-import streamlit as st
 import datetime as dt
+import json
+import re
+from typing import Dict, Tuple
+
+import numpy as np
+import pandas as pd
+import streamlit as st
 
 
 class SePump:
@@ -23,7 +24,7 @@ class SePump:
         """Loads data from csv into dataframe.
 
         Args:
-            csv (st.runtime.uploaded_file_manager.UploadedFile): Uploaded csv 
+            csv (st.runtime.uploaded_file_manager.UploadedFile): Uploaded csv
             file.
         """
         self.data = pd.read_csv(csv, sep=None, engine="python")
@@ -32,19 +33,21 @@ class SePump:
         """Retrieves applicable column names based on given dataframe.
 
         Args:
-            column_definitions_path (str): Path to json file with column name 
+            column_definitions_path (str): Path to json file with column name
             definitions.
         """
-        with open(column_definitions_path, encoding='utf8') as f:
+        with open(column_definitions_path, encoding="utf8") as f:
             column_definitions = json.load(f)
         self.columns = self.__infer_column_names(self.data, column_definitions)
 
-    def __infer_column_names(self, data: pd.DataFrame, column_definitions: Dict) -> Dict:
+    def __infer_column_names(
+        self, data: pd.DataFrame, column_definitions: Dict
+    ) -> Dict:
         """Infers the dataframe's language and returns the corresponging column names.
 
         Args:
             data (pd.DataFrame): Pandas dataframe containing workout data.
-            column_definitions (Dict): Dictionary of column names in different 
+            column_definitions (Dict): Dictionary of column names in different
                 languages. Currently supported: German & English
 
         Raises:
@@ -73,37 +76,55 @@ class SePump:
             return column_definitions["GER_ANDROID"]
         except Exception:
             pass
-        
+
         raise Exception("Language of data not supported.")
 
     def clean_data(self) -> None:
         """Performs initial data cleaning of given workout data."""
         self.data = self.data.drop_duplicates(keep="first")
-        self.data = self.data[[
-            self.columns["DATE"],
-            self.columns["WORKOUT_NAME"],
-            self.columns["EXERCISE_NAME"],
-            self.columns["WEIGHT"],
-            self.columns["REPS"],
-            self.columns["WORKOUT_DURATION"],
-            self.columns["NOTES"]
-        ]]
-        self.data.dropna(subset=[self.columns["WEIGHT"], self.columns["REPS"]], how='all', inplace=True)
+        self.data = self.data[
+            [
+                self.columns["DATE"],
+                self.columns["WORKOUT_NAME"],
+                self.columns["EXERCISE_NAME"],
+                self.columns["WEIGHT"],
+                self.columns["REPS"],
+                self.columns["WORKOUT_DURATION"],
+                self.columns["NOTES"],
+            ]
+        ]
+        self.data.dropna(
+            subset=[self.columns["WEIGHT"], self.columns["REPS"]],
+            how="all",
+            inplace=True,
+        )
         self.data[self.columns["WEIGHT"]] = self.data[self.columns["WEIGHT"]].fillna(0)
         self.data[self.columns["REPS"]] = self.data[self.columns["REPS"]].fillna(0)
         # hacky way of dealing with differently formatted decimal numbers, assuming nobody goes beyond 1000 kg
-        self.data[self.columns["WEIGHT"]] = self.data[self.columns["WEIGHT"]].replace(",", ".", regex=True).astype(np.single)
-        self.data[self.columns["REPS"]] = self.data[self.columns["REPS"]].replace(",", ".", regex=True).astype(np.single)
+        self.data[self.columns["WEIGHT"]] = (
+            self.data[self.columns["WEIGHT"]]
+            .replace(",", ".", regex=True)
+            .astype(np.single)
+        )
+        self.data[self.columns["REPS"]] = (
+            self.data[self.columns["REPS"]]
+            .replace(",", ".", regex=True)
+            .astype(np.single)
+        )
         self.data["workout_uid"] = (
             self.data[self.columns["WORKOUT_NAME"]]
             + self.data[self.columns["DATE"]].copy().astype(str)
             + self.data[self.columns["WORKOUT_DURATION"]]
         )
-        self.data[self.columns["DATE"]] = pd.to_datetime(self.data[self.columns["DATE"]]).dt.date
-        self.data["volume"] = self.data[self.columns["WEIGHT"]] * self.data[self.columns["REPS"]]
-        self.data[self.columns["WORKOUT_DURATION"]] = self.data[self.columns["WORKOUT_DURATION"]].apply(
-            self.__convert_duration_to_minutes
+        self.data[self.columns["DATE"]] = pd.to_datetime(
+            self.data[self.columns["DATE"]]
+        ).dt.date
+        self.data["volume"] = (
+            self.data[self.columns["WEIGHT"]] * self.data[self.columns["REPS"]]
         )
+        self.data[self.columns["WORKOUT_DURATION"]] = self.data[
+            self.columns["WORKOUT_DURATION"]
+        ].apply(self.__convert_duration_to_minutes)
 
     def update_date_range(self, start_date: dt.date, end_date: dt.date) -> None:
         """Updates workout data based on given start and end date.
@@ -123,34 +144,42 @@ class SePump:
         Args:
             exercise (str): Name of the exercise.
         """
-        exercise_data = self.data[self.data[self.columns["EXERCISE_NAME"]] == exercise].copy()
+        exercise_data = self.data[
+            self.data[self.columns["EXERCISE_NAME"]] == exercise
+        ].copy()
         exercise_data.loc[:, "workout_exercise_uid"] = (
             exercise_data[self.columns["WORKOUT_NAME"]]
             + exercise_data[self.columns["EXERCISE_NAME"]]
             + exercise_data[self.columns["DATE"]].copy().astype(str)
         )
-        self.exercise_data = exercise_data.groupby("workout_exercise_uid").agg(**{
-            "date": (self.columns["DATE"], "max"),
-            "exercise": (self.columns["EXERCISE_NAME"], "first"),
-            "mean_reps": (self.columns["REPS"], "mean"),
-            "max_weight": (self.columns["WEIGHT"], "max"),
-            "max_reps": (self.columns["REPS"], "max"),
-            "max_volume": ("volume", "max"),
-            "total_volume": ("volume", "sum"),
-            "total_reps": (self.columns["REPS"], "sum"),
-            "notes": (self.columns["NOTES"], "first")
-        })
-        self.exercise_data["mean_weight"] = self.exercise_data["total_volume"] / self.exercise_data["total_reps"]
+        self.exercise_data = exercise_data.groupby("workout_exercise_uid").agg(
+            **{
+                "date": (self.columns["DATE"], "max"),
+                "exercise": (self.columns["EXERCISE_NAME"], "first"),
+                "mean_reps": (self.columns["REPS"], "mean"),
+                "max_weight": (self.columns["WEIGHT"], "max"),
+                "max_reps": (self.columns["REPS"], "max"),
+                "max_volume": ("volume", "max"),
+                "total_volume": ("volume", "sum"),
+                "total_reps": (self.columns["REPS"], "sum"),
+                "notes": (self.columns["NOTES"], "first"),
+            }
+        )
+        self.exercise_data["mean_weight"] = (
+            self.exercise_data["total_volume"] / self.exercise_data["total_reps"]
+        )
         self.prev_exercise_data = self.exercise_data.sort_values(by="date")
         self.prev_exercise_data = self.prev_exercise_data.iloc[:-1]
 
-    def calculate_exercise_metric_and_delta(self, column: str, aggregation: str) -> Tuple[str, str]:
-        """Perfoms a certain aggregation of a given column of exercise data and 
+    def calculate_exercise_metric_and_delta(
+        self, column: str, aggregation: str
+    ) -> Tuple[str, str]:
+        """Perfoms a certain aggregation of a given column of exercise data and
             calculates the difference between the last two workouts.
 
         Args:
             column (str): Name of the column.
-            aggregation (str): Aggregation method. Can be one of  [max, sum, 
+            aggregation (str): Aggregation method. Can be one of  [max, sum,
                 len]
 
         Raises:
@@ -161,13 +190,13 @@ class SePump:
         """
         if aggregation == "max":
             metric = self.exercise_data[column].max()
-            if self.prev_exercise_data[column].max() is not np.NaN:
+            if self.prev_exercise_data[column].max() is not np.nan:
                 metric_prev = self.prev_exercise_data[column].max()
             else:
                 metric_prev = metric
         elif aggregation == "sum":
             metric = self.exercise_data[column].sum()
-            if self.prev_exercise_data[column].sum() is not np.NaN:
+            if self.prev_exercise_data[column].sum() is not np.nan:
                 metric_prev = self.prev_exercise_data[column].sum()
             else:
                 metric_prev = metric
@@ -187,15 +216,19 @@ class SePump:
         Args:
             workout_name (str): Name of the workout routine.
         """
-        self.workout_data = self.data[self.data[self.columns["WORKOUT_NAME"]] == workout_name]
+        self.workout_data = self.data[
+            self.data[self.columns["WORKOUT_NAME"]] == workout_name
+        ]
 
     def update_workout_data_agg(self) -> None:
         """Updates aggregated metrics for single workout routine."""
-        self.workout_data_agg = self.workout_data.groupby("workout_uid").agg(**{
-            "date": (self.columns["DATE"], "max"),
-            "total_volume": ("volume", "sum"),
-            "total_reps": (self.columns["REPS"], "sum")
-        })
+        self.workout_data_agg = self.workout_data.groupby("workout_uid").agg(
+            **{
+                "date": (self.columns["DATE"], "max"),
+                "total_volume": ("volume", "sum"),
+                "total_reps": (self.columns["REPS"], "sum"),
+            }
+        )
 
     def __convert_duration_to_minutes(self, duration: str) -> int:
         """Converts workout duration from string representation to integers.
@@ -207,12 +240,12 @@ class SePump:
         Returns:
             int: The corresponding number of minutes (e.g. "1h 20m" will return
             80).
-        
+
         Raises:
             ValueError: If the duration format is invalid.
         """
         # Regex to match hours and minutes
-        match = re.match(r'^(?:(\d+)h)?\s*(?:(\d+)m)?', duration)
+        match = re.match(r"^(?:(\d+)h)?\s*(?:(\d+)m)?", duration)
         hours = match.group(1)
         minutes = match.group(2)
 
@@ -224,5 +257,5 @@ class SePump:
             total_minutes += int(hours) * 60
         if minutes:
             total_minutes += int(minutes)
-        
+
         return total_minutes

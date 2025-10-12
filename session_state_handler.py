@@ -1,5 +1,6 @@
-import streamlit as st
 from typing import List
+
+import streamlit as st
 
 
 def on_csv_upload():
