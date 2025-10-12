@@ -82,6 +82,10 @@ class SePump:
     def clean_data(self) -> None:
         """Performs initial data cleaning of given workout data."""
         self.data = self.data.drop_duplicates(keep="first")
+
+        if self.columns["NOTES"] not in self.data.columns:
+            self.data[self.columns["NOTES"]] = ""
+
         self.data = self.data[
             [
                 self.columns["DATE"],
@@ -93,6 +97,8 @@ class SePump:
                 self.columns["NOTES"],
             ]
         ]
+
+        self.data[self.columns["NOTES"]] = self.data[self.columns["NOTES"]].fillna("")
         self.data.dropna(
             subset=[self.columns["WEIGHT"], self.columns["REPS"]],
             how="all",
