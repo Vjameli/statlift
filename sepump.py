@@ -91,19 +91,35 @@ class SePump:
         if self.columns["NOTES"] not in self.data.columns:
             self.data[self.columns["NOTES"]] = ""
 
-        self.data = self.data[
-            [
-                self.columns["DATE"],
-                self.columns["WORKOUT_NAME"],
-                self.columns["EXERCISE_NAME"],
-                self.columns["WEIGHT"],
-                self.columns["REPS"],
-                self.columns["WORKOUT_DURATION"],
-                self.columns["NOTES"],
-            ]
+        # Core columns always selected
+        selected_cols = [
+            self.columns["DATE"],
+            self.columns["WORKOUT_NAME"],
+            self.columns["EXERCISE_NAME"],
+            self.columns["WEIGHT"],
+            self.columns["REPS"],
+            self.columns["WORKOUT_DURATION"],
+            self.columns["NOTES"],
         ]
 
+        # Optional columns for weekly view (may not exist in all CSVs)
+        for key in ("RPE", "SET_ORDER", "WORKOUT_NOTES"):
+            col_name = self.columns.get(key)
+            if col_name and col_name in self.data.columns:
+                selected_cols.append(col_name)
+
+        self.data = self.data[selected_cols]
+
+        # Preserve full datetime before converting DATE to date-only
+        self.data["datetime"] = pd.to_datetime(self.data[self.columns["DATE"]])
+
         self.data[self.columns["NOTES"]] = self.data[self.columns["NOTES"]].fillna("")
+
+        # Fill NaN for optional columns
+        for key in ("RPE", "SET_ORDER", "WORKOUT_NOTES"):
+            col_name = self.columns.get(key)
+            if col_name and col_name in self.data.columns:
+                self.data[col_name] = self.data[col_name].fillna("")
         self.data.dropna(
             subset=[self.columns["WEIGHT"], self.columns["REPS"]],
             how="all",

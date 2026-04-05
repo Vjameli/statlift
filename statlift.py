@@ -5,6 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from sepump import SePump
+from weekly_view import show_weekly_view
 from session_state_handler import (
     init_session_state_updates,
     on_csv_upload,
@@ -115,6 +116,14 @@ if __name__ == "__main__":
     st.divider()
     st.write("## :bar_chart: Metrics across all workouts:")
     show_total_stats(st.session_state["data"])
+
+    ###########################################################################
+    # 1b. Weekly calendar view
+    ###########################################################################
+
+    st.divider()
+    st.write("## :calendar: Weekly View:")
+    show_weekly_view(st.session_state["data"], st.session_state["columns"])
 
     ###########################################################################
     # 2. Metrics and graphs for individual exercises
