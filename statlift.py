@@ -31,7 +31,7 @@ def show_total_stats(data: pd.DataFrame) -> None:
     total_duration = int(duration_data["duration"].sum())
     cl1, cl2, cl3, cl4, cl5 = st.columns(5)
     cl1.metric(label="\\# of Workouts", value="{:,}".format(total_workouts))
-    cl2.metric(label="Total Volume (kg)", value="{:,}".format(total_volume))
+    cl2.metric(label="Total Volume (lbs)", value="{:,}".format(total_volume))
     cl3.metric(label="\\# of Sets", value="{:,}".format(total_sets))
     cl4.metric(label="\\# of Reps", value="{:,}".format(total_reps))
     cl5.metric(label="\\# of Minutes trained", value="{:,}".format(total_duration))
@@ -165,10 +165,10 @@ if __name__ == "__main__":
     ecl1, ecl2, ecl3 = st.columns(3)
     ecl1.metric(label="Total Sets", value=total_sets, delta=total_sets_delta)
     ecl2.metric(label="Total Reps", value=total_reps, delta=total_reps_delta)
-    ecl3.metric(label="Total Volume (kg)", value=total_volume, delta=total_volume_delta)
-    ecl1.metric(label="Max Weight (kg)", value=max_weight, delta=max_weight_delta)
+    ecl3.metric(label="Total Volume (lbs)", value=total_volume, delta=total_volume_delta)
+    ecl1.metric(label="Max Weight (lbs)", value=max_weight, delta=max_weight_delta)
     ecl2.metric(label="Max Reps", value=max_reps, delta=max_reps_delta)
-    ecl3.metric(label="Max Volume (kg)", value=max_volume, delta=max_volume_delta)
+    ecl3.metric(label="Max Volume (lbs)", value=max_volume, delta=max_volume_delta)
 
     # 2b. Graphs
     v_space(1)
