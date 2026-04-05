@@ -123,7 +123,11 @@ if __name__ == "__main__":
 
     st.divider()
     st.write("## :calendar: Weekly View:")
-    show_weekly_view(st.session_state["data"], st.session_state["columns"])
+    show_weekly_view(
+        st.session_state["data"],
+        st.session_state["columns"],
+        full_data=st.session_state["cleaned_data"],
+    )
 
     ###########################################################################
     # 2. Metrics and graphs for individual exercises

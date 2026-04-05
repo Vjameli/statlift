@@ -43,23 +43,28 @@ StatLift is a Streamlit-based web app for analyzing workout data exported from t
 
 ### Public API
 
-- `show_weekly_view(data: pd.DataFrame, columns: Dict) -> None` — Renders the weekly calendar view section.
+- `show_weekly_view(data, columns, full_data=None)` — Renders the weekly calendar view section. Accepts optional `full_data` (unfiltered dataset) for computing PRs against all-time history.
 
 ### Internal Helpers
 
-- `_get_week_label(monday: dt.date) -> str` — Formats a week label like "Mar 2 - Mar 8, 2026".
+- `_get_week_label(monday: dt.date) -> str` — Formats a week label like "Mar 2 – Mar 8, 2026".
 - `_get_weeks(data, date_col) -> list` — Returns `(monday, label)` tuples for all weeks in data, most recent first.
-- `_format_set_line(row, columns) -> str` — Formats a single set: `1) 135.0 lbs x 8 @ RPE 8 (vol: 1080)`.
-- `_render_day_card(col, day, day_data, columns) -> None` — Renders a single day's card with workout details or "Rest".
+- `_compute_prs(full_data, columns) -> Dict[int, Set[str]]` — Computes personal records per set by iterating chronologically per exercise. Tracks weight, single-set volume, and estimated 1RM (Epley formula). Returns a dict mapping DataFrame index to a set of PR types (`'1RM'`, `'Vol.'`, `'Weight'`).
+- `_build_day_html(day, day_data, columns, pr_map) -> str` — Builds the HTML string for a single day's dark-themed card.
+- `_esc(text) -> str` — HTML-escapes a value for safe rendering.
+- `_fmt_weight(weight) -> str` — Formats weight, dropping `.0` for whole numbers.
 
-### Day Card Contents
+### Day Card Design
 
-- Day label (e.g., "Mon Mar 30")
-- Workout name + time
-- Workout-level notes (if present)
-- Each exercise: name (bold), then each set showing set#, weight x reps, RPE, and volume
-- Exercise-level notes (if present)
-- Footer: duration (minutes) and total volume (lbs)
+Cards use a dark theme (`#1a2332` background) rendered via `st.markdown` with custom HTML/CSS:
+
+- **Header**: Workout name (bold white) + date/time (gray caption)
+- **Exercise sections**: Name (bold, truncated with ellipsis) + "1RM" label (teal) when any set achieved a 1RM PR
+- **Set lines**: `set# weight lb × reps @ RPE` (left) with estimated 1RM (right, gray)
+- **PR badges**: Teal rounded pills (`1RM`, `Vol.`, `Weight`) below sets that achieved personal records
+- **Footer**: Duration, total volume, PR count (exercises with at least one PR)
+- **Rest days**: Centered italic "Rest" label
+- **Bodyweight exercises**: Shown as "BW × reps" when weight is 0
 
 ## Data Columns
 
