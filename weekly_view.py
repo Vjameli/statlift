@@ -162,6 +162,124 @@ def _fmt_weight(weight: float) -> str:
     return str(int(weight)) if weight == int(weight) else f"{weight:.1f}"
 
 
+def _build_exercise_card_html(
+    workout_name: str,
+    exercise_name: str,
+    exercise_rows: pd.DataFrame,
+    columns: Dict,
+    pr_map: Dict[int, Set[str]],
+    sticky_notes: Set[tuple],
+) -> str:
+    """Build HTML for a single exercise instance card."""
+
+    first = exercise_rows.iloc[0]
+
+    # Date/time
+    day = first[columns["DATE"]]
+    time_str = ""
+    if "datetime" in exercise_rows.columns:
+        workout_dt = first["datetime"]
+        if pd.notna(workout_dt):
+            if isinstance(day, dt.date):
+                time_str = (
+                    day.strftime("%a, %b ")
+                    + str(day.day)
+                    + day.strftime(", %Y")
+                    + f" at {workout_dt.strftime('%H:%M')}"
+                )
+
+    # Exercise-level 1RM PR?
+    has_1rm_pr = any(
+        "1RM" in pr_map.get(idx, set()) for idx in exercise_rows.index
+    )
+
+    html = [
+        '<div class="wv-card">',
+        f'<div class="wv-title">{_esc(workout_name)}</div>',
+    ]
+    if time_str:
+        html.append(f'<div class="wv-date">{_esc(time_str)}</div>')
+
+    # Exercise header
+    html.append('<div class="ex-section">')
+    html.append('<div class="ex-hdr">')
+    html.append(f'<span class="ex-name">{_esc(exercise_name)}</span>')
+    if has_1rm_pr:
+        html.append('<span class="ex-pr">1RM</span>')
+    html.append("</div>")
+
+    # Exercise note (one-time only)
+    note_text = first[columns["NOTES"]]
+    if (
+        note_text
+        and str(note_text).strip()
+        and (exercise_name, note_text) not in sticky_notes
+    ):
+        html.append(f'<div class="wv-note">{_esc(note_text)}</div>')
+
+    # Sets
+    for idx, row in exercise_rows.iterrows():
+        weight = float(row[columns["WEIGHT"]])
+        reps = int(float(row[columns["REPS"]]))
+
+        # set order
+        so_col = columns.get("SET_ORDER", "")
+        set_num = ""
+        if so_col and so_col in row.index:
+            so = row[so_col]
+            if so and str(so).strip():
+                try:
+                    set_num = str(int(float(so)))
+                except (ValueError, TypeError):
+                    pass
+
+        # RPE
+        rpe_str = ""
+        rpe_col = columns.get("RPE", "")
+        if rpe_col and rpe_col in row.index:
+            rpe_val = row[rpe_col]
+            if rpe_val and str(rpe_val).strip():
+                try:
+                    rpe_num = float(rpe_val)
+                    rpe_fmt = (
+                        str(int(rpe_num))
+                        if rpe_num == int(rpe_num)
+                        else str(rpe_num)
+                    )
+                    rpe_str = f" @ {rpe_fmt}"
+                except (ValueError, TypeError):
+                    pass
+
+        if weight > 0:
+            left = f"{set_num}&nbsp;&nbsp;{_fmt_weight(weight)} lb × {reps}{rpe_str}"
+        else:
+            left = f"{set_num}&nbsp;&nbsp;BW × {reps}{rpe_str}"
+
+        right = ""
+        if weight > 0 and reps > 0:
+            right = str(int(round(weight * (1 + reps / 30))))
+
+        html.append(
+            f'<div class="set-row">'
+            f"<span>{left}</span>"
+            f'<span class="set-1rm">{right}</span>'
+            f"</div>"
+        )
+
+        set_prs = pr_map.get(idx, set())
+        if set_prs:
+            badges = "".join(
+                f'<span class="badge">{_esc(pr)}</span>'
+                for pr in ("1RM", "Vol.", "Weight")
+                if pr in set_prs
+            )
+            html.append(f'<div class="badges">{badges}</div>')
+
+    html.append("</div>")  # ex-section
+    html.append("</div>")  # wv-card
+    return "\n".join(html)
+
+
 def _build_day_html(
     day: dt.date,
     day_data: pd.DataFrame,
@@ -363,3 +481,73 @@ def show_weekly_view(
                 _build_day_html(day, day_data, columns, pr_map, sticky_notes),
                 unsafe_allow_html=True,
             )
+
+
+def show_exercise_history(
+    exercise: str,
+    data: pd.DataFrame,
+    columns: Dict,
+    full_data: Optional[pd.DataFrame] = None,
+    cards_per_row: int = 6,
+) -> None:
+    """Displays a grid of exercise instance cards across different workouts.
+
+    Each card shows one workout session's sets for the selected exercise,
+    laid out left-to-right, top-to-bottom, most recent first.
+
+    Args:
+        exercise: Name of the exercise to show history for.
+        data: Filtered workout dataframe.
+        columns: Column name mapping dictionary.
+        full_data: Full unfiltered dataset for PR/sticky computation.
+        cards_per_row: Number of cards per row in the grid.
+    """
+    st.markdown(CARD_CSS, unsafe_allow_html=True)
+
+    # Filter to selected exercise
+    ex_data = data[data[columns["EXERCISE_NAME"]] == exercise].copy()
+    if ex_data.empty:
+        st.info("No data for this exercise.")
+        return
+
+    # Group by workout instance (workout_uid), sorted most recent first
+    groups = []
+    for uid, group in ex_data.groupby("workout_uid", sort=False):
+        groups.append(group)
+    groups.sort(key=lambda g: g["datetime"].iloc[0], reverse=True)
+
+    total_instances = len(groups)
+
+    # Selector for how many instances to show
+    max_show = st.select_slider(
+        "**Instances to show**",
+        options=list(range(1, total_instances + 1)),
+        value=min(6, total_instances),
+        key=f"exercise_history_count_{exercise}",
+    )
+
+    groups = groups[:max_show]
+
+    # Compute PRs and sticky notes
+    history = full_data if full_data is not None else data
+    pr_map = _compute_prs(history, columns)
+    sticky_notes = _find_sticky_notes(history, columns)
+
+    # Render cards in rows
+    for row_start in range(0, len(groups), cards_per_row):
+        row_groups = groups[row_start : row_start + cards_per_row]
+        cols = st.columns(cards_per_row)
+        for j, group in enumerate(row_groups):
+            workout_name = group.iloc[0][columns["WORKOUT_NAME"]]
+            with cols[j]:
+                st.markdown(
+                    _build_exercise_card_html(
+                        workout_name,
+                        exercise,
+                        group,
+                        columns,
+                        pr_map,
+                        sticky_notes,
+                    ),
+                    unsafe_allow_html=True,
+                )

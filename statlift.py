@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from sepump import SePump
-from weekly_view import show_weekly_view
+from weekly_view import show_exercise_history, show_weekly_view
 from session_state_handler import (
     init_session_state_updates,
     on_csv_upload,
@@ -183,7 +183,17 @@ if __name__ == "__main__":
     ecl2.metric(label="Max Reps", value=max_reps, delta=max_reps_delta)
     ecl3.metric(label="Max Volume (lbs)", value=max_volume, delta=max_volume_delta)
 
-    # 2b. Graphs
+    # 2b. Exercise history cards
+    v_space(1)
+    st.write(f"##### :clipboard: History for *{exercise_filter}*:")
+    show_exercise_history(
+        exercise_filter,
+        st.session_state["data"],
+        st.session_state["columns"],
+        full_data=st.session_state["cleaned_data"],
+    )
+
+    # 2c. Graphs
     v_space(1)
     st.write(f"##### :chart_with_upwards_trend: Graphs for *{exercise_filter}*:")
 
