@@ -50,7 +50,8 @@ StatLift is a Streamlit-based web app for analyzing workout data exported from t
 - `_get_week_label(monday: dt.date) -> str` — Formats a week label like "Mar 2 – Mar 8, 2026".
 - `_get_weeks(data, date_col) -> list` — Returns `(monday, label)` tuples for all weeks in data, most recent first.
 - `_compute_prs(full_data, columns) -> Dict[int, Set[str]]` — Computes personal records per set by iterating chronologically per exercise. Tracks weight, single-set volume, and estimated 1RM (Epley formula). Returns a dict mapping DataFrame index to a set of PR types (`'1RM'`, `'Vol.'`, `'Weight'`).
-- `_build_day_html(day, day_data, columns, pr_map) -> str` — Builds the HTML string for a single day's dark-themed card.
+- `_find_sticky_notes(full_data, columns) -> Set[tuple]` — Identifies sticky/template exercise notes by finding `(exercise, note)` pairs appearing on more than one date.
+- `_build_day_html(day, day_data, columns, pr_map, sticky_notes) -> str` — Builds the HTML string for a single day's dark-themed card.
 - `_esc(text) -> str` — HTML-escapes a value for safe rendering.
 - `_fmt_weight(weight) -> str` — Formats weight, dropping `.0` for whole numbers.
 
@@ -59,10 +60,12 @@ StatLift is a Streamlit-based web app for analyzing workout data exported from t
 Cards use a dark theme (`#1a2332` background) rendered via `st.markdown` with custom HTML/CSS:
 
 - **Header**: Workout name (bold white) + date/time (gray caption)
+- **Workout notes**: Italic gray text below the date (one-time workout-level comments)
 - **Exercise sections**: Name (bold, truncated with ellipsis) + "1RM" label (teal) when any set achieved a 1RM PR
+- **Exercise notes**: Italic gray text below exercise name. Only one-time notes are shown; sticky/template notes (same text appearing on 2+ dates for the same exercise) are filtered out via `_find_sticky_notes()`
 - **Set lines**: `set# weight lb × reps @ RPE` (left) with estimated 1RM (right, gray)
 - **PR badges**: Teal rounded pills (`1RM`, `Vol.`, `Weight`) below sets that achieved personal records
-- **Footer**: Duration, total volume, PR count (exercises with at least one PR)
+- **Footer**: Duration (e.g. "1h 6m"), total volume, PR count (exercises with at least one PR)
 - **Rest days**: Centered italic "Rest" label
 - **Bodyweight exercises**: Shown as "BW × reps" when weight is 0
 

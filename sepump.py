@@ -120,6 +120,36 @@ class SePump:
             col_name = self.columns.get(key)
             if col_name and col_name in self.data.columns:
                 self.data[col_name] = self.data[col_name].fillna("")
+
+        # Propagate exercise notes from header rows (NaN weight/reps) to set
+        # rows before dropping them.  In Strong CSVs, notes live on a
+        # dedicated row with no weight/reps data.
+        notes_col = self.columns["NOTES"]
+        weight_col = self.columns["WEIGHT"]
+        reps_col = self.columns["REPS"]
+        exercise_col = self.columns["EXERCISE_NAME"]
+        date_col = self.columns["DATE"]
+        header_mask = (
+            self.data[weight_col].isna() & self.data[reps_col].isna()
+        )
+        header_notes = self.data.loc[
+            header_mask & (self.data[notes_col] != ""),
+            [date_col, exercise_col, notes_col],
+        ].drop_duplicates()
+        if not header_notes.empty:
+            note_lookup = {
+                (row[date_col], row[exercise_col]): row[notes_col]
+                for _, row in header_notes.iterrows()
+            }
+            set_mask = ~header_mask
+            self.data.loc[set_mask, notes_col] = self.data.loc[set_mask].apply(
+                lambda r: note_lookup.get(
+                    (r[date_col], r[exercise_col]),
+                    r[notes_col],
+                ),
+                axis=1,
+            )
+
         self.data.dropna(
             subset=[self.columns["WEIGHT"], self.columns["REPS"]],
             how="all",

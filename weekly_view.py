@@ -41,6 +41,10 @@ CARD_CSS = """<style>
     border-top: 1px solid #283848; padding-top: 6px; margin-top: 10px;
     color: #6b7b8b; font-size: 11px; display: flex; gap: 14px;
 }
+.wv-card .wv-note {
+    color: #7a8a9a; font-size: 11px; font-style: italic;
+    margin: 2px 0 4px 0; line-height: 1.4;
+}
 .wv-card .rest-label {
     color: #6b7b8b; font-style: italic; text-align: center; padding: 20px 0; font-size: 14px;
 }
@@ -127,6 +131,32 @@ def _esc(text) -> str:
     return html_mod.escape(str(text))
 
 
+def _find_sticky_notes(full_data: pd.DataFrame, columns: Dict) -> Set[tuple]:
+    """Identify sticky (template) exercise notes that repeat across dates.
+
+    A note is sticky if the same (exercise, note_text) pair appears on more
+    than one distinct date.
+
+    Returns:
+        Set of (exercise_name, note_text) tuples that are sticky.
+    """
+    notes_col = columns["NOTES"]
+    exercise_col = columns["EXERCISE_NAME"]
+    date_col = columns["DATE"]
+
+    has_notes = full_data[full_data[notes_col] != ""]
+    if has_notes.empty:
+        return set()
+
+    grouped = (
+        has_notes.groupby([exercise_col, notes_col])[date_col]
+        .nunique()
+        .reset_index(name="date_count")
+    )
+    sticky = grouped[grouped["date_count"] > 1]
+    return set(zip(sticky[exercise_col], sticky[notes_col]))
+
+
 def _fmt_weight(weight: float) -> str:
     """Format weight, dropping '.0' for whole numbers."""
     return str(int(weight)) if weight == int(weight) else f"{weight:.1f}"
@@ -137,6 +167,7 @@ def _build_day_html(
     day_data: pd.DataFrame,
     columns: Dict,
     pr_map: Dict[int, Set[str]],
+    sticky_notes: Set[tuple],
 ) -> str:
     """Build the HTML string for a single day card."""
 
@@ -159,6 +190,13 @@ def _build_day_html(
         f'<div class="wv-date">{_esc(time_str)}</div>',
     ]
 
+    # --- workout notes ---
+    wn_col = columns.get("WORKOUT_NOTES", "")
+    if wn_col and wn_col in day_data.columns:
+        wn = day_data.iloc[0][wn_col]
+        if wn and str(wn).strip():
+            html.append(f'<div class="wv-note">{_esc(wn)}</div>')
+
     # --- exercises ---
     pr_exercise_count = 0
     exercises = day_data.groupby(columns["EXERCISE_NAME"], sort=False)
@@ -176,6 +214,15 @@ def _build_day_html(
         if has_1rm_pr:
             html.append('<span class="ex-pr">1RM</span>')
         html.append("</div>")
+
+        # --- exercise note (one-time only) ---
+        note_text = exercise_sets.iloc[0][columns["NOTES"]]
+        if (
+            note_text
+            and str(note_text).strip()
+            and (exercise_name, note_text) not in sticky_notes
+        ):
+            html.append(f'<div class="wv-note">{_esc(note_text)}</div>')
 
         for idx, row in exercise_sets.iterrows():
             weight = float(row[columns["WEIGHT"]])
@@ -241,7 +288,11 @@ def _build_day_html(
 
     # --- footer ---
     total_volume = int(day_data["volume"].sum())
-    parts = [f"{duration}m", f"{total_volume:,} lb"]
+    if duration >= 60:
+        dur_str = f"{duration // 60}h {duration % 60}m"
+    else:
+        dur_str = f"{duration}m"
+    parts = [dur_str, f"{total_volume:,} lb"]
     if pr_exercise_count > 0:
         suffix = "s" if pr_exercise_count != 1 else ""
         parts.append(f"{pr_exercise_count} PR{suffix}")
@@ -291,8 +342,10 @@ def show_weekly_view(
     if selected_monday is None:
         return
 
-    # Compute PRs against full history
-    pr_map = _compute_prs(full_data if full_data is not None else data, columns)
+    # Compute PRs and sticky notes against full history
+    history = full_data if full_data is not None else data
+    pr_map = _compute_prs(history, columns)
+    sticky_notes = _find_sticky_notes(history, columns)
 
     # Render 7 day columns
     week_days = [selected_monday + dt.timedelta(days=i) for i in range(7)]
@@ -307,6 +360,6 @@ def show_weekly_view(
             )
             day_data = data[data[columns["DATE"]] == day]
             st.markdown(
-                _build_day_html(day, day_data, columns, pr_map),
+                _build_day_html(day, day_data, columns, pr_map, sticky_notes),
                 unsafe_allow_html=True,
             )
