@@ -58,5 +58,19 @@
         "NOTES": "Notes",
         "WORKOUT_NOTES": "Workout Notes",
         "WORKOUT_DURATION": "Workout Duration"
+    },
+    "ENG_UNITS_IN_HEADER": {
+        "DATE": "Date",
+        "WORKOUT_NAME": "Workout Name",
+        "EXERCISE_NAME": "Exercise Name",
+        "SET_ORDER": "Set Order",
+        "WEIGHT": "Weight (kg)",
+        "REPS": "Reps",
+        "RPE": "RPE",
+        "DISTANCE": "Distance (meters)",
+        "SECONDS": "Seconds",
+        "NOTES": "Notes",
+        "WORKOUT_NOTES": "Workout Notes",
+        "WORKOUT_DURATION": "Duration (sec)"
     }
 }

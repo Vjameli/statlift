@@ -76,6 +76,11 @@ class SePump:
             return column_definitions["GER_ANDROID"]
         except Exception:
             pass
+        try:
+            _ = data["Duration (sec)"]
+            return column_definitions["ENG_UNITS_IN_HEADER"]
+        except Exception:
+            pass
 
         raise Exception("Language of data not supported.")
 
@@ -118,9 +123,9 @@ class SePump:
             .astype(np.single)
         )
         self.data["workout_uid"] = (
-            self.data[self.columns["WORKOUT_NAME"]]
+            self.data[self.columns["WORKOUT_NAME"]].astype(str)
             + self.data[self.columns["DATE"]].copy().astype(str)
-            + self.data[self.columns["WORKOUT_DURATION"]]
+            + self.data[self.columns["WORKOUT_DURATION"]].astype(str)
         )
         self.data[self.columns["DATE"]] = pd.to_datetime(
             self.data[self.columns["DATE"]]
@@ -236,21 +241,26 @@ class SePump:
             }
         )
 
-    def __convert_duration_to_minutes(self, duration: str) -> int:
-        """Converts workout duration from string representation to integers.
+    def __convert_duration_to_minutes(self, duration) -> int:
+        """Converts workout duration to minutes.
+
+        Supports both string format ("1h 20m") and raw seconds (numeric).
 
         Args:
-            duration (str): Duration in the format "<hours>h <minutes>m",
-            "<hours>h", or "<minutes>m" (e.g. "1h 20m", "3h", or "30m").
+            duration: Duration as "Xh Ym" string or numeric seconds.
 
         Returns:
-            int: The corresponding number of minutes (e.g. "1h 20m" will return
-            80).
-
-        Raises:
-            ValueError: If the duration format is invalid.
+            int: The corresponding number of minutes.
         """
-        # Regex to match hours and minutes
+        # Handle numeric seconds (e.g. from "Duration (sec)" column)
+        try:
+            seconds = float(duration)
+            return int(seconds // 60)
+        except (ValueError, TypeError):
+            pass
+
+        # Handle string format ("1h 20m", "3h", "30m")
+        duration = str(duration)
         match = re.match(r"^(?:(\d+)h)?\s*(?:(\d+)m)?", duration)
         hours = match.group(1)
         minutes = match.group(2)
