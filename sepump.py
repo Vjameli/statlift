@@ -122,6 +122,11 @@ class SePump:
             .replace(",", ".", regex=True)
             .astype(np.single)
         )
+        # Convert kg to lbs if weight column indicates kilograms
+        if "kg" in self.columns["WEIGHT"].lower():
+            self.data[self.columns["WEIGHT"]] = (
+                self.data[self.columns["WEIGHT"]] * 2.20462
+            ).round(1)
         self.data["workout_uid"] = (
             self.data[self.columns["WORKOUT_NAME"]].astype(str)
             + self.data[self.columns["DATE"]].copy().astype(str)
