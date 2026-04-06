@@ -14,6 +14,7 @@ CARD_CSS = """<style>
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-size: 13px;
     line-height: 1.5;
+    height: fit-content;
 }
 .wv-card .wv-title { font-weight: 700; color: #ffffff; font-size: 15px; margin-bottom: 2px; }
 .wv-card .wv-date { color: #6b7b8b; font-size: 11px; margin-bottom: 4px; }
@@ -533,21 +534,24 @@ def show_exercise_history(
     pr_map = _compute_prs(history, columns)
     sticky_notes = _find_sticky_notes(history, columns)
 
-    # Render cards in rows
-    for row_start in range(0, len(groups), cards_per_row):
-        row_groups = groups[row_start : row_start + cards_per_row]
-        cols = st.columns(cards_per_row)
-        for j, group in enumerate(row_groups):
-            workout_name = group.iloc[0][columns["WORKOUT_NAME"]]
-            with cols[j]:
-                st.markdown(
-                    _build_exercise_card_html(
-                        workout_name,
-                        exercise,
-                        group,
-                        columns,
-                        pr_map,
-                        sticky_notes,
-                    ),
-                    unsafe_allow_html=True,
-                )
+    # Render all cards in a single CSS grid to avoid row-height overlap
+    card_htmls = []
+    for group in groups:
+        workout_name = group.iloc[0][columns["WORKOUT_NAME"]]
+        card_htmls.append(
+            _build_exercise_card_html(
+                workout_name,
+                exercise,
+                group,
+                columns,
+                pr_map,
+                sticky_notes,
+            )
+        )
+
+    grid_html = (
+        f'<div style="display: grid; grid-template-columns: repeat({cards_per_row}, 1fr); gap: 12px;">'
+        + "\n".join(card_htmls)
+        + "</div>"
+    )
+    st.markdown(grid_html, unsafe_allow_html=True)
