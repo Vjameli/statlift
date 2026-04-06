@@ -41,10 +41,9 @@ def show_total_stats(data: pd.DataFrame) -> None:
 if __name__ == "__main__":
     # setup page
     st.set_page_config(page_title="StatLift", page_icon=":muscle:", layout="wide")
-    st.title("StatLift - Free Analytics for Strong Data :rocket:")
+    st.title("StatLift - Free Analytics for Strong Data")
     st.write(
-        "[![Star](https://img.shields.io/github/stars/jjaju/statlift.svg?logo=github&style=social)]"
-        + "(https://github.com/jjaju/statlift)"
+        "Forked from [https://github.com/jjaju/statlift](https://github.com/jjaju/statlift)"
     )
 
     # initialize workout data handler
@@ -134,7 +133,7 @@ if __name__ == "__main__":
     ###########################################################################
 
     st.divider()
-    st.write("## :muscle: Metrics for individual exercises:")
+    st.write("## \U0001f3cb\ufe0f Metrics for individual exercises:")
 
     exercise_filter = st.selectbox(
         "**Select exercise**",
