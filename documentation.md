@@ -36,7 +36,7 @@ StatLift is a Streamlit-based web app for analyzing workout data exported from t
 ### App Sections
 
 1. **Overall Metrics** — Aggregated stats across all workouts (count, volume, sets, reps, duration).
-2. **Weekly View** — Calendar-style 7-column (Mon-Sun) layout showing workout cards per day with full exercise details (sets, weight, reps, RPE, notes, volume) or "Rest" for off days. Users select a week from a dropdown.
+2. **Weekly View** — Calendar-style 7-column (Mon-Sun) layout showing workout cards per day with full exercise details (sets, weight, reps, RPE, notes, volume) or "Rest" for off days. Users select a start week and end week to display a range of weeks stacked vertically (most recent first), enabling coaches or users to scroll through multiple weeks at once.
 3. **Individual Exercise Metrics** — Per-exercise stats, exercise history grid (dark-themed cards showing each workout instance with a slider for how many to display), and trend charts with optional linear regression.
 4. **Workout Routine Metrics** — Per-routine (e.g., "Push Day") aggregated stats and trend charts.
 
@@ -44,7 +44,7 @@ StatLift is a Streamlit-based web app for analyzing workout data exported from t
 
 ### Public API
 
-- `show_weekly_view(data, columns, full_data=None)` — Renders the weekly calendar view section. Accepts optional `full_data` (unfiltered dataset) for computing PRs against all-time history.
+- `show_weekly_view(data, columns, full_data=None)` — Renders the weekly calendar view section with start/end week selectors for displaying a range of weeks. Accepts optional `full_data` (unfiltered dataset) for computing PRs against all-time history.
 - `show_exercise_history(exercise, data, columns, full_data=None, cards_per_row=6)` — Renders a grid of exercise instance cards showing each time the selected exercise was performed across different workouts, most recent first. Includes a slider to control how many instances to display.
 
 ### Internal Helpers

@@ -448,17 +448,42 @@ def show_weekly_view(
         st.info("No weeks found in the data.")
         return
 
+    # weeks is sorted most-recent-first; index 0 = newest, last = oldest
     week_labels = [label for _, label in weeks]
-    selected_label = st.selectbox(
-        "**Select week**", week_labels, key="weekly_view_selector"
-    )
 
-    selected_monday = None
-    for monday, label in weeks:
-        if label == selected_label:
-            selected_monday = monday
-            break
-    if selected_monday is None:
+    col_start, col_end = st.columns(2)
+    with col_start:
+        start_label = st.selectbox(
+            "**Start week** (most recent)",
+            week_labels,
+            index=0,
+            key="weekly_view_start",
+        )
+    with col_end:
+        end_label = st.selectbox(
+            "**End week** (oldest)",
+            week_labels,
+            index=min(len(week_labels) - 1, 3),
+            key="weekly_view_end",
+        )
+
+    # Map labels back to mondays
+    label_to_monday = {label: monday for monday, label in weeks}
+    start_monday = label_to_monday[start_label]
+    end_monday = label_to_monday[end_label]
+
+    # Ensure start >= end (start is more recent)
+    if start_monday < end_monday:
+        start_monday, end_monday = end_monday, start_monday
+
+    # Collect weeks in the range, most recent first
+    selected_weeks = [
+        (monday, label)
+        for monday, label in weeks
+        if end_monday <= monday <= start_monday
+    ]
+
+    if not selected_weeks:
         return
 
     # Compute PRs and sticky notes against full history
@@ -466,22 +491,27 @@ def show_weekly_view(
     pr_map = _compute_prs(history, columns)
     sticky_notes = _find_sticky_notes(history, columns)
 
-    # Render 7 day columns
-    week_days = [selected_monday + dt.timedelta(days=i) for i in range(7)]
     day_labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-    day_columns = st.columns(7)
 
-    for i, day in enumerate(week_days):
-        with day_columns[i]:
-            st.markdown(
-                f'<div class="wv-day-hdr">{day_labels[i]}</div>',
-                unsafe_allow_html=True,
-            )
-            day_data = data[data[columns["DATE"]] == day]
-            st.markdown(
-                _build_day_html(day, day_data, columns, pr_map, sticky_notes),
-                unsafe_allow_html=True,
-            )
+    # Render each week, most recent first
+    for monday, label in selected_weeks:
+        st.markdown(f"#### {label}")
+        week_days = [monday + dt.timedelta(days=i) for i in range(7)]
+        day_columns = st.columns(7)
+
+        for i, day in enumerate(week_days):
+            with day_columns[i]:
+                st.markdown(
+                    f'<div class="wv-day-hdr">{day_labels[i]}</div>',
+                    unsafe_allow_html=True,
+                )
+                day_data = data[data[columns["DATE"]] == day]
+                st.markdown(
+                    _build_day_html(day, day_data, columns, pr_map, sticky_notes),
+                    unsafe_allow_html=True,
+                )
+
+        st.markdown("---")
 
 
 def show_exercise_history(
