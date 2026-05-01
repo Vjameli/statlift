@@ -218,6 +218,7 @@ class SePump:
             **{
                 "date": (self.columns["DATE"], "max"),
                 "exercise": (self.columns["EXERCISE_NAME"], "first"),
+                "total_sets": (self.columns["REPS"], "count"),
                 "mean_reps": (self.columns["REPS"], "mean"),
                 "max_weight": (self.columns["WEIGHT"], "max"),
                 "max_reps": (self.columns["REPS"], "max"),

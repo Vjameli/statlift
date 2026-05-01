@@ -156,7 +156,7 @@ if __name__ == "__main__":
     st.write(f"##### :bar_chart: Metrics for *{exercise_filter}*:")
 
     total_sets, total_sets_delta = sepump.calculate_exercise_metric_and_delta(
-        "date", "len"
+        "total_sets", "sum"
     )
     total_reps, total_reps_delta = sepump.calculate_exercise_metric_and_delta(
         "total_reps", "sum"

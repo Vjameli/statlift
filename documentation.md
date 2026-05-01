@@ -101,6 +101,7 @@ Cards use a dark theme (`#1a2332` background) rendered via `st.markdown` with cu
 | `datetime` | Full datetime timestamp (preserved before date-only conversion) |
 | `workout_uid` | Unique workout identifier (name + date + duration) |
 | `volume` | Weight x Reps for each set |
+| `total_sets` | Number of sets per exercise per workout instance (used in per-exercise metrics aggregation) |
 
 ## Running the App
 
